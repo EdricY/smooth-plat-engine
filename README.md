@@ -1,1 +1,2 @@
 # smooth-plat-engine
+Eventually, this should result in an easy-to-use JavaScript library that efficiently does a lot of computation necessary for a smooth tile-based platformer game using HTML5 canvas.
