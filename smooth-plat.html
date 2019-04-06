@@ -129,7 +129,7 @@ var player = {
  * x: collision position
  */
 function findYCollisionDown(y, vy, x, width, height) {
-    vy = Math.round(vy);
+    vy = Math.ceil(vy);
     if (vy <= 0) return null;
     y = Math.floor(y);
     x = Math.floor(x);
@@ -145,7 +145,7 @@ function findYCollisionDown(y, vy, x, width, height) {
     return null;
 }
 function findYCollisionUp(y, vy, x, width, height) {
-    vy = Math.round(vy);
+    vy = Math.floor(vy);
     if (vy >= 0) return null;
     y = Math.floor(y);
     x = Math.floor(x);
@@ -165,7 +165,7 @@ function findYCollisionUp(y, vy, x, width, height) {
  * x: suggested relocation
  */
 function findXCollisionRight(x, vx, y, width, height) {
-    vx = Math.round(vx);
+    vx = Math.ceil(vx);
     if (vx <= 0) return null;
     x = Math.floor(x);
     y = Math.floor(y);
@@ -181,7 +181,7 @@ function findXCollisionRight(x, vx, y, width, height) {
     return null
 }
 function findXCollisionLeft(x, vx, y, width, height) {
-    vx = Math.round(vx);
+    vx = Math.floor(vx);
     if (vx >= 0) return null;
     x = Math.floor(x);
     y = Math.floor(y);
