@@ -1,11 +1,19 @@
 <!DOCTYPE html>
 <html>
+<head>
+<script>
+var loadedImgs = 0;
+function imageLoaded() { loadedImgs++; }
+</script>
+</head>
 <body>
 <div id="loadmsg">Loading...</div>
 <canvas id="canvas" width="960" height="720"></canvas>
 <canvas hidden id="renderer" width="960" height="720"></canvas>
 </body>
 <img hidden id='c_map' src='collision-map.png' alt='img' onload="imageLoaded()">
+
+<script src="frames.js"></script>
 <script>
 // declarations
 var canvas = document.getElementById('canvas')
@@ -35,11 +43,12 @@ var lastKeys = {};
 
 
 var player = {
-    x: 0,
-    y: 0,
+    x: 40, // middle of player (right pixel)
+    y: 0,  // bottom of player
     vx: 0,
     vy: 0,
     w: 32,
+    hw: 32/2, //half width
 	h: 64,
     ax: .6,
 	jv: -18,
@@ -50,8 +59,10 @@ var player = {
 	midair: true,
     draw() {
         ctx.fillStyle = 'red';
-        let f_x = Math.floor(this.x);
-        let f_y = Math.floor(this.y);
+        let top = this.y-this.h+1;
+        let left = this.x -this.hw
+        let f_x = Math.floor(left);
+        let f_y = Math.floor(top);
         ctx.fillRect(f_x, f_y, this.w, this.h, this.color);
     },
     update() {
@@ -69,54 +80,67 @@ var player = {
         if (this.jumps && (keys[38] || keys[87]) && (!lastKeys[38] && !lastKeys[87])) { //up
             this.vy = -18;
         }
-        if (this.vy >= 0) { //moving down
-            let y_cls = findYCollisionDown(this.y, this.vy, this.x, this.w, this.h);
-            if (y_cls == null) {
-                this.y += this.vy;
-                this.midair = true;
-            } else { //landed on something
-                this.vy = 0;
-                this.y = y_cls.y;
-                this.midair = false;
+        let vy = Math.round(this.vy);
+
+        //TODO: x-to-y ratio-driven slanted movement instead of L-shaped movement
+        if (vy > 0) { //moving down
+            for (let i = 0; i < vy; i++) {
+                let x_cls = getCollisionDown(this.y, this.x, this.hw);
+                if (x_cls == null) {
+                    this.y++;
+                    this.midair = true;
+                } else { //landed on something
+                    this.vy = 0;
+                    this.midair = false;
+                }
             }
-        } else { //moving up
-            let y_cls = findYCollisionUp(this.y, this.vy, this.x, this.w, this.h);
+        } else if (vy < 0) { //moving up
             this.midair = true;
-            if (y_cls == null) {
-                this.y += this.vy;
-            } else { //hit your head
-                this.vy = 0;
-                this.y = y_cls.y;
-                this.midair = false;
-            }
-        }
-        if (this.vx > 0) { //moving right
-            let x_cls = findXCollisionRight(this.x, this.vx, this.y, this.w, this.h);
-            if (x_cls == null) this.x += this.vx;
-            else { //hit wall
-                let step_h = this.y + this.h - x_cls.y;
-                if (step_h <= this.step_h) {
-                    this.x = x_cls.x + 1;
-                    this.y -= step_h; //not implemented: climbing more than 1 step
-                } else {
-                    this.vx = 0;
-                    this.x = x_cls.x;
-                }
-            }
-        } else if(this.vx < 0) { //moving left
-            let x_cls = findXCollisionLeft(this.x, this.vx, this.y, this.w, this.h);
-            if (x_cls == null) this.x += this.vx;
-            else { //hit wall
-                let step_h = this.y + this.h - x_cls.y;
-                if (step_h <= this.step_h) {
-                    this.x = x_cls.x - 1;
-                    this.y -= step_h; //not implemented: climbing more than 1 step
-                } else {
-                    this.vx = 0;
-                    this.x = x_cls.x;
+            for (let i = 0; i > vy; i--) {
+                let top = this.y-this.h+1;
+                let x_cls = getCollisionUp(top, this.x, this.hw);
+                if (x_cls == null) {
+                    this.y--;
+                } else { //hit your head
+                    this.vy = 0;
                 }
             }
         }
+        
+        let vx = Math.round(this.vx);
+        if (vx > 0) { //moving right
+            for (let i = 0; i < vx; i++) {
+                let right = this.x+this.hw-1;
+                let y_cls = getCollisionRight(right, this.y, this.h);
+                if (y_cls == null) {
+                    this.x++;
+                } else { //hit wall
+                    this.vx = 0;
+                    let step_h = this.y-y_cls;
+                    if (step_h < this.step_h) {
+                        this.y = y_cls-1;
+                        this.x++;
+                        //not implemented: climbing more than 1 step
+                    }
+                }
+            }
+        } else if (vx < 0) { //moving left
+            for (let i = 0; i > vx; i--) {
+                let y_cls = getCollisionLeft(this.x-this.hw, this.y, this.h);
+                if (y_cls == null) {
+                    this.x--;
+                } else { //hit wall
+                    this.vx = 0;
+                    let step_h = this.y-y_cls;
+                    if (step_h < this.step_h) {
+                        this.y = y_cls-1;
+                        this.x--;
+                        //not implemented: climbing more than 1 step
+                    }
+                }
+            }
+        }
+
         this.vx *= FRICTION;
         if (Math.abs(this.vx) - .01 < 0) {
             this.vx = 0;
@@ -124,82 +148,61 @@ var player = {
     }
 }
 
-/* returns Point(x,y)
- * y: suggested relocation
- * x: collision position
- */
-function findYCollisionDown(y, vy, x, width, height) {
-    vy = Math.ceil(vy);
-    if (vy <= 0) return null;
-    y = Math.floor(y);
-    x = Math.floor(x);
-    let bottom = y + height
-    for (let r = bottom; r < bottom + vy; r++) {
-        if (r >= H) return new Point(x, H - height);
-        for (let c = x; c < x + width; c++) {
-            if (map_data[r][c] !== null) {
-                return new Point(c, r - height);
-            }
-        }
-    }
-    return null;
-}
-function findYCollisionUp(y, vy, x, width, height) {
-    vy = Math.floor(vy);
-    if (vy >= 0) return null;
-    y = Math.floor(y);
-    x = Math.floor(x);
-    for (let r = y-1; r > y + vy-1; r--) {
-        if (r <= 0) return new Point(x, 0);
-        for (let c = x; c < x + width; c++) {
-            if (map_data[r][c] == 1) {
-                return new Point(c, r+1);
-            }
+// returns x pos of collision or null
+function getCollisionDown(bottom, x, halfwidth) {
+    let r = Math.round(bottom) + 1; //row below bottom
+    if (r >= H) return x;           //screen bottom
+    x = Math.round(x) - halfwidth;  //left
+    for (let c = x; c < x + halfwidth*2; c++) {
+        if (map_data[r][c] !== null) {
+            return c;
         }
     }
     return null;
 }
 
-/* returns Point(x,y)
- * y: collision position
- * x: suggested relocation
- */
-function findXCollisionRight(x, vx, y, width, height) {
-    vx = Math.ceil(vx);
-    if (vx <= 0) return null;
-    x = Math.floor(x);
-    y = Math.floor(y);
-    let right = x + width;
-    for (let c = right; c < right + vx; c++) {
-        if (c >= W) return new Point(c - width, y); //right edge
-        for (let r = y; r < y + height; r++) {
-            if (map_data[r][c] == 1) {
-                return new Point(c - width, r);
-            }
+// returns x pos of collision or null
+function getCollisionUp(top, x, halfwidth) {
+    let r = Math.round(top) - 1;    //row above top
+    if (r < 0) return x;            //screen top
+    x = Math.round(x) - halfwidth;  //left
+    for (let c = x; c < x + halfwidth*2; c++) {
+        if (map_data[r][c] == 1) {
+            return c;
         }
     }
-    return null
+    return null;
 }
-function findXCollisionLeft(x, vx, y, width, height) {
-    vx = Math.floor(vx);
-    if (vx >= 0) return null;
-    x = Math.floor(x);
-    y = Math.floor(y);
-    for (let c = x-1; c > x + vx-1; c--) {
-        if (c <= 0) return new Point(0, y); //left edge
-        for (let r = y; r < y + height; r++) {
-            if (map_data[r][c] == 1) {
-                return new Point(c+1, r);
-            }
+
+// returns y pos of collision or null
+function getCollisionRight(right, y, height) {
+    let c = Math.round(right) + 1;  //col after right
+    if (c > W) return y;            //screen right
+    y = Math.round(y);              //bottom
+    for (let r = y-height+1; r <= y; r++) { //scan downward to find highest collision
+        if (map_data[r][c] == 1) {
+            return r;
+        }
+    }
+    return null;
+}
+
+// returns y pos of collision or null
+function getCollisionLeft(left, y, height) {
+    let c = Math.round(left) - 1;   //col before left
+    if (c < 0) return y;            //screen left
+    y = Math.round(y);              //bottom
+    for (let r = y-height+1; r <= y; r++) { //scan downward
+        if (map_data[r][c] == 1) {
+            return r;
         }
     }
     return null;
 }
 
 var loadInterval = setInterval(attemptInit, 500);
-var loaded = 0;
 function attemptInit() {
-    if (loaded == 1) {
+    if (loadedImgs == 1) {
         ctx.drawImage(c_map, 0, 0)
         map_data = getCanvasData();
         loadmsg.parentNode.removeChild(loadmsg);
@@ -209,7 +212,6 @@ function attemptInit() {
     }
 }
 
-function imageLoaded() { loaded++; }
 
 function getCanvasData() {
     data = []
