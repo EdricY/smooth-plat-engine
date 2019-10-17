@@ -5,7 +5,7 @@
 <canvas id="canvas" width="960" height="720"></canvas>
 <canvas hidden id="renderer" width="960" height="720"></canvas>
 </body>
-<img hidden id='c_map' src='collision-map.png' alt='img'>
+<img hidden id='c_map' src='collision-map.png' alt='img' onload="imageLoaded()">
 <script>
 // declarations
 var canvas = document.getElementById('canvas')
@@ -196,14 +196,20 @@ function findXCollisionLeft(x, vx, y, width, height) {
     return null;
 }
 
-
-function init() {
-    ctx.drawImage(c_map, 0, 0)
-    map_data = getCanvasData();
-    loadmsg.parentNode.removeChild(loadmsg);
-    gameInt = setInterval(tick, 1);
-    flushToCanvas()
+var loadInterval = setInterval(attemptInit, 500);
+var loaded = 0;
+function attemptInit() {
+    if (loaded == 1) {
+        ctx.drawImage(c_map, 0, 0)
+        map_data = getCanvasData();
+        loadmsg.parentNode.removeChild(loadmsg);
+        gameInt = setInterval(tick, 1);
+        flushToCanvas()
+        clearInterval(loadInterval)
+    }
 }
+
+function imageLoaded() { loaded++; }
 
 function getCanvasData() {
     data = []
@@ -219,8 +225,6 @@ function getCanvasData() {
     }
     return data
 }
-
-setTimeout(init, 100);
 
 function draw() {
     ctx.drawImage(c_map, 0, 0)
