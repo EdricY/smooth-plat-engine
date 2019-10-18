@@ -3,6 +3,7 @@
 <head>
 <script>
 var loadedImgs = 0;
+const IMGS_TO_LOAD = 2;
 function imageLoaded() { loadedImgs++; }
 </script>
 </head>
@@ -12,6 +13,7 @@ function imageLoaded() { loadedImgs++; }
 <canvas hidden id="renderer" width="960" height="720"></canvas>
 </body>
 <img hidden id='c_map' src='collision-map.png' alt='img' onload="imageLoaded()">
+<img hidden id='psprites' src='hector_greatlord_armads.png' alt='psprites' onload="imageLoaded()">
 
 <script src="frames.js"></script>
 <script>
@@ -19,6 +21,7 @@ function imageLoaded() { loadedImgs++; }
 var canvas = document.getElementById('canvas')
 var renderer = document.getElementById('renderer')
 var c_map = document.getElementById('c_map')
+var psprites = document.getElementById('psprites')
  
 
 var vis_ctx = canvas.getContext('2d')
@@ -43,8 +46,8 @@ var lastKeys = {};
 
 
 var player = {
-    x: 40, // middle of player (right pixel)
-    y: 0,  // bottom of player
+    x: 100, // middle of player (right pixel)
+    y: 200,  // bottom of player
     vx: 0,
     vy: 0,
     w: 32,
@@ -56,30 +59,81 @@ var player = {
 	mvy: 20,
 	jumps: 1,
     step_h: 16,
-	midair: true,
+    midair: true,
+    frameStep: 0,
+    states:  { FREE:0, CROUCHING:1, LANDING:2 },
+    state: 0,
+    animationTimer: 0,
     draw() {
+        let ptop = this.y - this.h+1;
+        let pleft = this.x - this.hw
+        let x = Math.floor(pleft);
+        let y = Math.floor(ptop);
         ctx.fillStyle = 'red';
-        let top = this.y-this.h+1;
-        let left = this.x -this.hw
-        let f_x = Math.floor(left);
-        let f_y = Math.floor(top);
-        ctx.fillRect(f_x, f_y, this.w, this.h, this.color);
+        // ctx.fillRect(x, y, this.w, this.h, this.color);
+        
+        let frame;
+        if (this.state == this.states.CROUCHING) {
+            frame = playerframes["jumpcrouch"][this.frameStep]
+        }
+        else if (this.state == this.states.LANDING) {
+            frame = playerframes["land"][this.frameStep]
+        }
+        else if (this.midair) {
+            if      (this.vy < -13.5)  this.frameStep = 0;
+            else if (this.vy < -11.25) this.frameStep = 1;
+            else if (this.vy < -9)     this.frameStep = 2;
+            else if (this.vy < -6.75)  this.frameStep = 3;
+            else if (this.vy < -4.5)   this.frameStep = 4;
+            else if (this.vy < -2.25)  this.frameStep = 5;
+            else                       this.frameStep = 6;
+            frame = playerframes["midair"][this.frameStep];
+        }
+        else {
+            frame = playerframes["stand"][0];
+        }
+        if (frame == undefined) console.log(this.state)
+
+        let top = this.y - (frame.py - frame.y);
+        let left = this.x - (frame.px - frame.x);
+        ctx.drawImage(psprites, frame.x, frame.y, frame.w, frame.h, left, top, frame.w, frame.h);
     },
     update() {
+
+        if (this.state == this.states.CROUCHING) {
+            this.frameStep = Math.floor(this.animationTimer / 4);
+            this.animationTimer++;
+            if (this.animationTimer >= 8) {
+                this.animationTimer = 0;
+                this.state = this.states.FREE; //this might trigger the next if...
+                this.vy = -18;
+            }
+        } else if (this.state == this.states.LANDING) {
+            this.frameStep = Math.floor(this.animationTimer / 7);
+            this.animationTimer++;
+            if (this.animationTimer >= 14) {
+                this.animationTimer = 0;
+                this.state = this.states.FREE;
+            }
+        }
+        if (this.state == this.states.FREE || this.state == this.states.LANDING) { //controls
+            if (keys[37] || keys[65]) { //left
+                this.vx -= this.ax;
+                if (this.vx < -this.maxv)
+                    this.vx = -this.maxv;
+            }
+            if (keys[39] || keys[68]) { //right
+                this.vx += this.ax;
+                if (this.vx > this.maxv)
+                    this.vx = this.maxv;
+            }
+            if (this.jumps && (keys[38] || keys[87]) && (!lastKeys[38] && !lastKeys[87])) { //up
+                this.state = this.states.CROUCHING; //maybe need to timeout this?
+                this.frameStep = 0;
+            }
+        }
+        let ovy = this.vy;
         this.vy += GRAVITY;
-        if (keys[37] || keys[65]) { //left
-            this.vx -= this.ax;
-            if (this.vx < -this.maxv)
-                this.vx = -this.maxv;
-        }
-        if (keys[39] || keys[68]) { //right
-            this.vx += this.ax;
-            if (this.vx > this.maxv)
-                this.vx = this.maxv;
-        }
-        if (this.jumps && (keys[38] || keys[87]) && (!lastKeys[38] && !lastKeys[87])) { //up
-            this.vy = -18;
-        }
         let vy = Math.round(this.vy);
 
         //TODO: x-to-y ratio-driven slanted movement instead of L-shaped movement
@@ -92,6 +146,10 @@ var player = {
                 } else { //landed on something
                     this.vy = 0;
                     this.midair = false;
+                    if (ovy > 5) { //actually landed
+                        this.state = this.states.LANDING;
+                        this.frameStep = 0;
+                    }
                 }
             }
         } else if (vy < 0) { //moving up
@@ -177,7 +235,7 @@ function getCollisionUp(top, x, halfwidth) {
 // returns y pos of collision or null
 function getCollisionRight(right, y, height) {
     let c = Math.round(right) + 1;  //col after right
-    if (c > W) return y;            //screen right
+    if (c > W) return y-height+1;   //screen right
     y = Math.round(y);              //bottom
     for (let r = y-height+1; r <= y; r++) { //scan downward to find highest collision
         if (map_data[r][c] == 1) {
@@ -190,7 +248,7 @@ function getCollisionRight(right, y, height) {
 // returns y pos of collision or null
 function getCollisionLeft(left, y, height) {
     let c = Math.round(left) - 1;   //col before left
-    if (c < 0) return y;            //screen left
+    if (c < 0) return y-height+1;   //screen left
     y = Math.round(y);              //bottom
     for (let r = y-height+1; r <= y; r++) { //scan downward
         if (map_data[r][c] == 1) {
@@ -202,7 +260,7 @@ function getCollisionLeft(left, y, height) {
 
 var loadInterval = setInterval(attemptInit, 500);
 function attemptInit() {
-    if (loadedImgs == 1) {
+    if (loadedImgs == IMGS_TO_LOAD) {
         ctx.drawImage(c_map, 0, 0)
         map_data = getCanvasData();
         loadmsg.parentNode.removeChild(loadmsg);
@@ -241,7 +299,7 @@ function update() {
 }
 
 function tick() {
-    if (Date.now() - lastTime > 10) {
+    if (Date.now() - lastTime > 16) {
         lastTime = Date.now();
         update();
     }
@@ -274,7 +332,9 @@ function drawHUD() {
 		'player.y',
 		'player.vx',
 		'player.vy',
-        'player.midair'
+        'player.midair',
+        'player.state',
+        'player.frameStep',
 	]
 
 	let spacing = 20;
