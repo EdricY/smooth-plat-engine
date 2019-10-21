@@ -22,10 +22,6 @@ function resrcLoaded() { loadedResrcs++; }
 <script src="frames.js"></script>
 <script>
 // declarations
-var canvas = document.getElementById('canvas')
-var renderer = document.getElementById('renderer')
-var mapImg = document.getElementById('mapImg')
-var psprites = document.getElementById('psprites')
  
 var vis_ctx = canvas.getContext('2d')
 var ctx = renderer.getContext('2d')
@@ -54,18 +50,6 @@ function attemptInit() {
 
 function getCanvasImageData(ctx) {
     return ctx.getImageData(0, 0, W, H).data;
-    // data = []
-    // raw_data = ctx.getImageData(0, 0, W, H).data
-    // for (let row = 0; row < H; row++) {
-    //     data.push([])
-    //     for (let col = 0; col < W; col++) {
-    //         let pos = 4 * (col + row*W);
-    //         let colorstr = raw_data.slice(pos, pos+4).toString()
-    //         let tileid = TILES[colorstr]
-    //         data[row].push(tileid);
-    //     }
-    // }
-    // return data
 }
 
 function draw() {

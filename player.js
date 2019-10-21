@@ -1,4 +1,4 @@
-// requires Animator
+// requires animator.js
 class Player {
     x = 100; // middle of player (right pixel)
     y = 200;  // bottom of player
@@ -15,12 +15,15 @@ class Player {
     step_h = 16;
     midair = true;
     frameStep = 0;
-    states = { FREE:0, CROUCHING:1, LANDING:2 };
-    state = 0;
-    animationTimer = 0;
     animator = new Animator();
-    constructor() { }
+    constructor() {
+        this.initAnimator();
+        this.animator.switchState("midair");
+    }
 
+    animCheck(stateName) {
+        return this.animator.inState(stateName);
+    } 
 
     draw(ctx) {
         let ptop = this.y - this.h+1;
@@ -28,53 +31,16 @@ class Player {
         let x = Math.floor(pleft);
         let y = Math.floor(ptop);
         ctx.fillStyle = 'red';
-        // ctx.fillRect(x, y, this.w, this.h, this.color);
-        
-        let frame;
-        if (this.state == this.states.CROUCHING) {
-            frame = playerframes["jumpcrouch"][this.frameStep]
-        }
-        else if (this.state == this.states.LANDING) {
-            frame = playerframes["land"][this.frameStep]
-        }
-        else if (this.midair) {
-            if      (this.vy < -13.5)  this.frameStep = 0;
-            else if (this.vy < -11.25) this.frameStep = 1;
-            else if (this.vy < -9)     this.frameStep = 2;
-            else if (this.vy < -6.75)  this.frameStep = 3;
-            else if (this.vy < -4.5)   this.frameStep = 4;
-            else if (this.vy < -2.25)  this.frameStep = 5;
-            else                       this.frameStep = 6;
-            frame = playerframes["midair"][this.frameStep];
-        }
-        else {
-            frame = playerframes["stand"][0];
-        }
-        if (frame == undefined) console.log(this.state)
-    
+
+        let frame = this.animator.getFramePositionData(this);
         let top = this.y - (frame.py - frame.y);
         let left = this.x - (frame.px - frame.x);
         ctx.drawImage(psprites, frame.x, frame.y, frame.w, frame.h, left, top, frame.w, frame.h);
     }
 
     update(cMap, keys, lastKeys) {
-        if (this.state == this.states.CROUCHING) {
-            this.frameStep = Math.floor(this.animationTimer / 4);
-            this.animationTimer++;
-            if (this.animationTimer >= 8) {
-                this.animationTimer = 0;
-                this.state = this.states.FREE; //this might trigger the next if...
-                this.vy = -18;
-            }
-        } else if (this.state == this.states.LANDING) {
-            this.frameStep = Math.floor(this.animationTimer / 7);
-            this.animationTimer++;
-            if (this.animationTimer >= 14) {
-                this.animationTimer = 0;
-                this.state = this.states.FREE;
-            }
-        }
-        if (this.state == this.states.FREE || this.state == this.states.LANDING) { //controls
+        this.animator.update();
+        if (true) { //controls (switch to "takingInput" condition)
             if (keys[37] || keys[65]) { //left
                 this.vx -= this.ax;
                 if (this.vx < -this.maxv)
@@ -85,11 +51,20 @@ class Player {
                 if (this.vx > this.maxv)
                     this.vx = this.maxv;
             }
-            if (this.jumps && (keys[38] || keys[87]) && (!lastKeys[38] && !lastKeys[87])) { //up
-                this.state = this.states.CROUCHING; //maybe need to timeout this?
-                this.frameStep = 0;
+            if (this.jumps && (keys[38] || keys[87]) && (!lastKeys[38] && !lastKeys[87]) && !this.animCheck("jumpcrouch")) { //up
+                this.jv = -18;
+                this.animator.switchState("jumpcrouch", t => {
+                    if (t > P_CROUCH_DUR) {
+                        this.animator.switchState("midair");
+                        this.vy = this.jv;
+                    }
+                });
+            }
+            if ((!keys[38] && !keys[87]) && (lastKeys[38] || lastKeys[87]) && this.animCheck("jumpcrouch")) { //short hop
+                this.jv = -13;
             }
         }
+        let omidair = this.midair;
         let ovy = this.vy;
         this.vy += GRAVITY;
         let vy = Math.round(this.vy);
@@ -104,9 +79,14 @@ class Player {
                 } else { //landed on something
                     this.vy = 0;
                     this.midair = false;
-                    if (ovy > 5) { //actually landed
-                        this.state = this.states.LANDING;
-                        this.frameStep = 0;
+                    if (ovy > 5) { //hard landing
+                        this.animator.switchState("land", t => {
+                            if (t > P_LAND_DUR) {
+                                this.animator.switchState("stand");
+                            }
+                        });
+                    } else if (this.animCheck("midair")) {
+                        this.animator.switchState("stand");
                     }
                 }
             }
@@ -161,5 +141,59 @@ class Player {
         if (Math.abs(this.vx) - .01 < 0) {
             this.vx = 0;
         }
+
+        if (this.midair && this.animCheck("stand"))
+        {
+            this.animator.switchState("midair"); //need timeout? (custom timeout?)
+        }
+    }
+
+    initAnimator() {
+        let midairframes = [
+            { x:340, y:433, w:50, h:59, px:356, py:486 },
+            { x:393, y:430, w:46, h:62, px:411, py:486 },
+            { x:7,   y:511, w:44, h:66, px:24 , py:572 },
+            { x:59,  y:507, w:41, h:70, px:76 , py:572 },
+            { x:106, y:506, w:36, h:71, px:125, py:572 },
+            { x:154, y:507, w:36, h:70, px:172, py:572 },
+            { x:197, y:507, w:37, h:70, px:213, py:572 },
+        ]
+        this.animator.register("midair",
+            midairframes,
+            t => {
+                // if      (obj.vy > -2.25)  return 6;
+                // else if (obj.vy > -4.5)   return 5;
+                // else if (obj.vy > -6.75)  return 4;
+                // else if (obj.vy > -9)     return 3;
+                // else if (obj.vy > -11.25) return 2;
+                // else if (obj.vy > -13.5)  return 1;
+                // else                      return 0;
+                return Math.floor(Math.min(6,Math.max(0, 7+this.vy/2.25)));
+            }
+        );
+
+        let jumpcrouchframes = [
+            { x:154, y:441, w:56, h:54, px:182, py:494 },
+            { x:214, y:440, w:55, h:55, px:242, py:494 },
+        ];
+        this.animator.register("jumpcrouch",
+            jumpcrouchframes,
+            getTimeBasedFrameSelector(P_CROUCH_DUR, jumpcrouchframes.length)
+        );
+
+        let landingframes = [
+            { x:241, y:507, w:47, h:87, px:270, py:590 },
+            { x:291, y:551, w:58, h:43, px:332, py:581 },
+        ];
+        this.animator.register("land",
+            landingframes,
+            getTimeBasedFrameSelector(P_LAND_DUR, landingframes.length)
+        );
+
+        this.animator.register("stand", [
+                { x:312, y:671, w:34, h:36, px:326, py:703 },
+            ],
+            (() => 0) //always select frame 0
+        );
     }
 }
