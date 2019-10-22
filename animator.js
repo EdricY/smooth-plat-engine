@@ -60,3 +60,10 @@ function getTimeBasedFrameSelector(duration, numFrames) {
         return Math.floor(t/perFrame);
     });
 }
+
+function getLoopingFrameSelector(duration, numFrames) {
+    let perFrame = duration / numFrames;
+    return (t => {
+        return Math.floor(t/perFrame) % numFrames;
+    });
+}

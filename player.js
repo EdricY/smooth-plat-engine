@@ -16,6 +16,7 @@ class Player {
     midair = true;
     frameStep = 0;
     animator = new Animator();
+    facingRight = false;
     constructor() {
         this.initAnimator();
         this.animator.switchState("midair");
@@ -31,11 +32,20 @@ class Player {
         let x = Math.floor(pleft);
         let y = Math.floor(ptop);
         ctx.fillStyle = 'red';
-
+        ctx.fillRect(x, y, this.w, this.h);
+        
         let frame = this.animator.getFramePositionData(this);
         let top = this.y - (frame.py - frame.y);
         let left = this.x - (frame.px - frame.x);
-        ctx.drawImage(psprites, frame.x, frame.y, frame.w, frame.h, left, top, frame.w, frame.h);
+        if (this.facingRight) {
+            let right = this.x + (frame.px - frame.x);
+            ctx.scale(-1, 1);
+            ctx.drawImage(psprites, frame.x, frame.y, frame.w, frame.h, -right, top, frame.w, frame.h);
+            ctx.scale(-1, 1);
+        } else {
+            ctx.drawImage(psprites, frame.x, frame.y, frame.w, frame.h, left, top, frame.w, frame.h);
+        }
+        
     }
 
     update(cMap, keys, lastKeys) {
@@ -43,13 +53,13 @@ class Player {
         if (true) { //controls (switch to "takingInput" condition)
             if (keys[37] || keys[65]) { //left
                 this.vx -= this.ax;
-                if (this.vx < -this.maxv)
-                    this.vx = -this.maxv;
+                if (this.vx < -this.maxv) this.vx = -this.maxv;
+                if (this.vx < 0) this.facingRight = false;
             }
             if (keys[39] || keys[68]) { //right
                 this.vx += this.ax;
-                if (this.vx > this.maxv)
-                    this.vx = this.maxv;
+                if (this.vx > this.maxv) this.vx = this.maxv;
+                if (this.vx > 0) this.facingRight = true;
             }
             if (this.jumps && (keys[38] || keys[87]) && (!lastKeys[38] && !lastKeys[87]) && !this.animCheck("jumpcrouch")) { //up
                 this.jv = -18;
@@ -73,6 +83,7 @@ class Player {
         if (vy > 0) { //moving down
             for (let i = 0; i < vy; i++) {
                 let x_cls = cMap.getCollisionDown(this.y, this.x, this.hw);
+                //TODO: fix clinging to right edge of screen
                 if (x_cls == null) {
                     this.y++;
                     this.midair = true;
@@ -191,9 +202,14 @@ class Player {
         );
 
         this.animator.register("stand", [
-                { x:312, y:671, w:34, h:36, px:326, py:703 },
+                // { x:312, y:671, w:34, h:36, px:326, py:703 },
+                { x:3, y:23, w:40, h:43, px:25, py:62 },
+                { x:48, y:16, w:39, h:50, px:68, py:62 },
+                { x:96, y:8, w:37, h:58, px:113, py:62 },
+                { x:48, y:16, w:39, h:50, px:68, py:62 },
             ],
-            (() => 0) //always select frame 0
+            getLoopingFrameSelector(60, 4)
+            // (() => 0) //always select frame 0
         );
     }
 }
