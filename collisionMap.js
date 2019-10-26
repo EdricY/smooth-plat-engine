@@ -59,7 +59,7 @@ class CollisionMap {
     // returns y pos of collision or null
     getCollisionRight(right, y, height) {
         let c = Math.round(right) + 1;  //col after right
-        if (c > W) return y-height+1;   //screen right
+        if (c >= W) return y-height+1;  //screen right
         y = Math.round(y);              //bottom
         for (let r = y-height+1; r <= y; r++) { //scan downward to find highest collision
             if (this.mapData[r][c] == 1) {

@@ -48,7 +48,7 @@ class Player {
         
     }
 
-    update(cMap, keys, lastKeys) {
+    update(cMap, keys, lastKeys, camera) {
         this.animator.update();
         if (true) { //controls (switch to "takingInput" condition)
             if (keys[37] || keys[65]) { //left
@@ -91,6 +91,7 @@ class Player {
                     this.vy = 0;
                     this.midair = false;
                     if (ovy > 5) { //hard landing
+                        camera.shake(8);
                         this.animator.switchState("land", t => {
                             if (t > P_LAND_DUR) {
                                 this.animator.switchState("stand");
@@ -148,11 +149,13 @@ class Player {
             }
         }
 
-        this.vx *= FRICTION;
-        if (Math.abs(this.vx) - .01 < 0) {
-            this.vx = 0;
+        if (!this.midair) {
+            this.vx *= FRICTION;
+            if (Math.abs(this.vx) - .01 < 0) {
+                this.vx = 0;
+            }
         }
-
+            
         if (this.midair && this.animCheck("stand"))
         {
             this.animator.switchState("midair"); //need timeout? (custom timeout?)

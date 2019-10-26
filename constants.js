@@ -10,3 +10,5 @@ const H = renderer.height
 
 const P_CROUCH_DUR = 6;
 const P_LAND_DUR = 14;
+
+const TAU = 2 * Math.PI;

@@ -17,6 +17,7 @@ function resrcLoaded() { loadedResrcs++; }
 
 <script src="constants.js"></script>
 <script src="collisionMap.js"></script>
+<script src="camera.js"></script>
 <script src="animator.js"></script>
 <script src="player.js"></script>
 <script src="frames.js"></script>
@@ -34,6 +35,7 @@ var gameInt
 var lastTime = Date.now();
 var keys = {};
 var lastKeys = {};
+var camera = new Camera();
 
 var loadInterval = setInterval(attemptInit, 500);
 function attemptInit() {
@@ -53,13 +55,18 @@ function getCanvasImageData(ctx) {
 }
 
 function draw() {
+    ctx.save();
+    camera.moveCtx(ctx);
     ctx.drawImage(mapImg, 0, 0);
     player.draw(ctx);
+    ctx.restore();
+
     drawHUD()
 }
 
 function update() {
-    player.update(cMap, keys, lastKeys)
+    camera.update();
+    player.update(cMap, keys, lastKeys, camera);
     lastKeys = JSON.parse(JSON.stringify(keys)); //deep copy
 }
 
