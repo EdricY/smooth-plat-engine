@@ -9,12 +9,11 @@ class Player {
     h = 64;
     ax = .6;
     jv = -18;
-    mvx = 50;
-    mvy = 20;
+    // mvx = 20;
+    mvy = 22;
     jumps = 1;
     step_h = 16;
     midair = true;
-    frameStep = 0;
     animator = new Animator();
     facingRight = false;
     constructor() {
@@ -53,12 +52,12 @@ class Player {
         if (true) { //controls (switch to "takingInput" condition)
             if (keys[37] || keys[65]) { //left
                 this.vx -= this.ax;
-                if (this.vx < -this.maxv) this.vx = -this.maxv;
+                // if (this.vx < -this.mvx) this.vx = -this.mvx;
                 if (this.vx < 0) this.facingRight = false;
             }
             if (keys[39] || keys[68]) { //right
                 this.vx += this.ax;
-                if (this.vx > this.maxv) this.vx = this.maxv;
+                // if (this.vx > this.mvx) this.vx = this.mvx;
                 if (this.vx > 0) this.facingRight = true;
             }
             if (this.jumps && (keys[38] || keys[87]) && (!lastKeys[38] && !lastKeys[87]) && !this.animCheck("jumpcrouch")) { //up
@@ -77,18 +76,14 @@ class Player {
         let omidair = this.midair;
         let ovy = this.vy;
         this.vy += GRAVITY;
+        if (this.vy > this.mvy) this.vy = this.mvy;
         let vy = Math.round(this.vy);
 
         //TODO: x-to-y ratio-driven slanted movement instead of L-shaped movement
         if (vy > 0) { //moving down
             for (let i = 0; i < vy; i++) {
-                let x_cls = cMap.getCollisionDown(this.y, this.x, this.hw);
-                //TODO: fix clinging to right edge of screen
-                if (x_cls == null) {
-                    this.y++;
-                    this.midair = true;
-                } else { //landed on something
-                    this.vy = 0;
+                let x_cls = this.scootDown(cMap);
+                if (x_cls != null) {
                     this.midair = false;
                     if (ovy > 5) { //hard landing
                         camera.shake(8);
@@ -105,55 +100,34 @@ class Player {
         } else if (vy < 0) { //moving up
             this.midair = true;
             for (let i = 0; i > vy; i--) {
-                let top = this.y-this.h+1;
-                let x_cls = cMap.getCollisionUp(top, this.x, this.hw);
-                if (x_cls == null) {
-                    this.y--;
-                } else { //hit your head
-                    this.vy = 0;
-                }
+                this.scootUp(cMap);
             }
         }
         
         let vx = Math.round(this.vx);
         if (vx > 0) { //moving right
             for (let i = 0; i < vx; i++) {
-                let right = this.x+this.hw-1;
-                let y_cls = cMap.getCollisionRight(right, this.y, this.h);
-                if (y_cls == null) {
+                let y_cls = this.scootRight(cMap);
+                let step_h = this.y-y_cls;
+                if (step_h < this.step_h) {
+                    this.y = y_cls-1;
                     this.x++;
-                } else { //hit wall
-                    this.vx = 0;
-                    let step_h = this.y-y_cls;
-                    if (step_h < this.step_h) {
-                        this.y = y_cls-1;
-                        this.x++;
-                        //not implemented: climbing more than 1 step
-                    }
                 }
             }
         } else if (vx < 0) { //moving left
             for (let i = 0; i > vx; i--) {
-                let y_cls = cMap.getCollisionLeft(this.x-this.hw, this.y, this.h);
-                if (y_cls == null) {
+                let y_cls = this.scootLeft(cMap);
+                let step_h = this.y-y_cls;
+                if (step_h < this.step_h) {
+                    this.y = y_cls-1;
                     this.x--;
-                } else { //hit wall
-                    this.vx = 0;
-                    let step_h = this.y-y_cls;
-                    if (step_h < this.step_h) {
-                        this.y = y_cls-1;
-                        this.x--;
-                        //not implemented: climbing more than 1 step
-                    }
                 }
             }
         }
 
-        if (!this.midair) {
-            this.vx *= FRICTION;
-            if (Math.abs(this.vx) - .01 < 0) {
-                this.vx = 0;
-            }
+        this.vx *= FRICTION; //maybe only when on ground?
+        if (Math.abs(this.vx) - .01 < 0) {
+            this.vx = 0;
         }
             
         if (this.midair && this.animCheck("stand"))
@@ -215,4 +189,62 @@ class Player {
             // (() => 0) //always select frame 0
         );
     }
+
+    /* move down 1 pixel or collide
+     * returns x-collision or null
+     */
+    scootDown(cMap) {
+        let x_cls = cMap.getCollisionDown(this.y, this.x, this.hw);
+        //TODO: fix clinging to right edge of screen
+        if (x_cls == null) {
+            this.y++;
+            this.midair = true;
+        } else { //landed on something
+            this.vy = 0;
+        }
+        return x_cls;
+    }
+
+    /* move up 1 pixel or collide
+     * returns x-collision or null
+     */
+    scootUp(cMap) { 
+        let top = this.y-this.h+1;
+        let x_cls = cMap.getCollisionUp(top, this.x, this.hw);
+        if (x_cls == null) {
+            this.y--;
+        } else { //hit your head
+            this.vy = 0;
+        }
+        return x_cls;
+    }
+
+    /* move right 1 pixel or collide
+     * returns y-collision or null
+     */
+    scootRight(cMap) {
+        let right = this.x+this.hw-1;
+        let y_cls = cMap.getCollisionRight(right, this.y, this.h);
+        if (y_cls == null) {
+            this.x++;
+        } else { //hit wall
+            this.vx = 0;
+        }
+        return y_cls;
+    }
+
+    /* move left 1 pixel or collide
+     * returns y-collision or null
+     */
+    scootLeft(cMap) {
+        let y_cls = cMap.getCollisionLeft(this.x-this.hw, this.y, this.h);
+        if (y_cls == null) {
+            this.x--;
+        } else { //hit wall
+            this.vx = 0;
+        }
+        return y_cls;
+    }
+
+
 }

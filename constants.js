@@ -3,7 +3,8 @@ var renderer = document.getElementById('renderer')
 var mapImg = document.getElementById('mapImg')
 var psprites = document.getElementById('psprites')
 const GRAVITY = 1;
-const FRICTION = .85;
+const FRICTION = .90; //unsure exactly why, but... 
+                      //player max ground speed == 1000 * (1 - FRICTION) * player.ax 
 
 const W = renderer.width
 const H = renderer.height
