@@ -6,28 +6,28 @@ const PIXELDICT = {
 
 class CollisionMap {
     constructor(imageData) {
-        this.mapData = []
-        for (let row = 0; row < H; row++) {
-            this.mapData.push([])
-            for (let col = 0; col < W; col++) {
+        this.collMatrix = [];
+        for (let row = 0; row < imageData.height; row++) {
+            this.collMatrix.push([])
+            for (let col = 0; col < imageData.width; col++) {
                 let pos = 4 * (col + row*W);
                 // let colorstr = imageData.slice(pos, pos+4).toString()
-                let r = imageData[pos];
-                let g = imageData[pos+1];
-                let b = imageData[pos+2];
-                let a = imageData[pos+3];
+                let r = imageData.data[pos];
+                let g = imageData.data[pos+1];
+                let b = imageData.data[pos+2];
+                let a = imageData.data[pos+3];
                 let colorstr = `${r},${g},${b},${a}`;
                 let pxid = PIXELDICT[colorstr]
                 if (pxid === undefined) {
                     pxid = a == 0 ? null : 1;
                 }
-                this.mapData[row].push(pxid);
+                this.collMatrix[row].push(pxid);
             }
         }
     }
 
     getPixel(x, y) {
-        return this.mapData[y][x];
+        return this.collMatrix[y][x];
     }
 
     // returns x pos of collision or null
@@ -36,7 +36,7 @@ class CollisionMap {
         if (r >= H) return x;           //screen bottom
         x = Math.round(x) - halfwidth;  //left
         for (let c = x; c < x + halfwidth*2; c++) {
-            if (this.mapData[r][c] !== null) {
+            if (this.collMatrix[r][c] !== null) {
                 return c;
             }
         }
@@ -49,7 +49,7 @@ class CollisionMap {
         if (r < 0) return x;            //screen top
         x = Math.round(x) - halfwidth;  //left
         for (let c = x; c < x + halfwidth*2; c++) {
-            if (this.mapData[r][c] == 1) {
+            if (this.collMatrix[r][c] == 1) {
                 return c;
             }
         }
@@ -62,7 +62,7 @@ class CollisionMap {
         if (c >= W) return y-height+1;  //screen right
         y = Math.round(y);              //bottom
         for (let r = y-height+1; r <= y; r++) { //scan downward to find highest collision
-            if (this.mapData[r][c] == 1) {
+            if (this.collMatrix[r][c] == 1) {
                 return r;
             }
         }
@@ -75,7 +75,7 @@ class CollisionMap {
         if (c < 0) return y-height+1;   //screen left
         y = Math.round(y);              //bottom
         for (let r = y-height+1; r <= y; r++) { //scan downward
-            if (this.mapData[r][c] == 1) {
+            if (this.collMatrix[r][c] == 1) {
                 return r;
             }
         }

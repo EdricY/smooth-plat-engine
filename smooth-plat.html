@@ -3,24 +3,30 @@
 <head>
 <script>
 var loadedResrcs = 0;
-const RESRCS_TO_LOAD = 2;
+const RESRCS_TO_LOAD = 7;
 function resrcLoaded() { loadedResrcs++; }
 </script>
 </head>
 <body>
 <div id="loadmsg">Loading...</div>
-<canvas id="canvas" width="960" height="720"></canvas>
-<canvas hidden id="renderer" width="960" height="720"></canvas>
+<canvas id="canvas" width="960" height="640"></canvas>
+<canvas hidden id="renderer" width="960" height="640"></canvas>
 </body>
-<img hidden id='mapImg' src='collision-map.png' alt='img' onload="resrcLoaded()">
-<img hidden id='psprites' src='hector_greatlord_armads.png' alt='psprites' onload="resrcLoaded()">
+<img hidden id='mapImg' src='resrc/collision-map.png' alt='img' onload="resrcLoaded()">
+<img hidden id='psprites' src='resrc/hector_greatlord_armads.png' alt='psprites' onload="resrcLoaded()">
+<img hidden id='brickImg' src='resrc/Brick.png' alt='psprites' onload="resrcLoaded()">
+<img hidden id='grassImg' src='resrc/Grass.png' alt='psprites' onload="resrcLoaded()">
+<img hidden id='dirtImg' src='resrc/Dirt.png' alt='psprites' onload="resrcLoaded()">
+<img hidden id='tileDictImg' src='resrc/TileDictionary.png' alt='tdict' onload="resrcLoaded()">
+<img hidden id='tileMapImg' src='resrc/TileMap.png' alt='psprites' onload="resrcLoaded()">
 
+<script src="imgutil.js"></script>
 <script src="constants.js"></script>
 <script src="collisionMap.js"></script>
 <script src="camera.js"></script>
 <script src="animator.js"></script>
 <script src="player.js"></script>
-<script src="frames.js"></script>
+<script src="tiles.js"></script>
 <script>
 // declarations
  
@@ -36,22 +42,34 @@ var lastTime = Date.now();
 var keys = {};
 var lastKeys = {};
 var camera = new Camera();
+var tileManager;
+var tileMap;
 
 var loadInterval = setInterval(attemptInit, 500);
 function attemptInit() {
     if (loadedResrcs == RESRCS_TO_LOAD) {
+        console.log("b")
+        clearInterval(loadInterval)
         ctx.drawImage(mapImg, 0, 0)
         cMap = new CollisionMap(getCanvasImageData(ctx));
         player = new Player();
+        tileManager = new TileManager()
+        ctx.clearRect(0, 0, W, H);
+        ctx.drawImage(tileDictImg, 0, 0);
+        tileManager.registerTilesFromImg(getCanvasImageData(ctx, 0, 0, 2, 2), [grassImg, dirtImg, brickImg]);
+        ctx.clearRect(0, 0, W, H);
+        ctx.drawImage(tileMapImg, 0, 0);
+        tileMap = tileManager.createTileMap(getCanvasImageData(ctx, 0, 0, 30, 30))
+
+        console.log("a")
         loadmsg.parentNode.removeChild(loadmsg);
         gameInt = setInterval(tick, 1);
         flushToCanvas()
-        clearInterval(loadInterval)
     }
 }
 
-function getCanvasImageData(ctx) {
-    return ctx.getImageData(0, 0, W, H).data;
+function getCanvasImageData(ctx, x=0, y=0, w=W, h=H) {
+    return ctx.getImageData(x, y, w, h);
 }
 
 function draw() {
@@ -61,13 +79,14 @@ function draw() {
     player.draw(ctx);
     ctx.restore();
 
+    drawTileMap(ctx,tileMap);
     drawHUD()
 }
 
 function update() {
     camera.update();
     player.update(cMap, keys, lastKeys, camera);
-    lastKeys = JSON.parse(JSON.stringify(keys)); //deep copy
+    lastKeys = JSON.parse(JSON.stringify(keys)); //deep copy TODO: custom deep copy
 }
 
 function tick() {
