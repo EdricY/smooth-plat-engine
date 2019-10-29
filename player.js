@@ -85,10 +85,10 @@ class Player {
                 let x_cls = this.scootDown(cMap);
                 if (x_cls != null) {
                     this.midair = false;
-                    if (ovy > 5) { //hard landing
+                    if (ovy > 8) { //hard landing
                         camera.shake(8);
                         this.animator.switchState("land", t => {
-                            if (t > P_LAND_DUR) {
+                            if (t >= P_LAND_DUR) {
                                 this.animator.switchState("stand");
                             }
                         });

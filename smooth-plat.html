@@ -3,7 +3,7 @@
 <head>
 <script>
 var loadedResrcs = 0;
-const RESRCS_TO_LOAD = 7;
+const RESRCS_TO_LOAD = 6;
 function resrcLoaded() { loadedResrcs++; }
 </script>
 </head>
@@ -12,8 +12,8 @@ function resrcLoaded() { loadedResrcs++; }
 <canvas id="canvas" width="960" height="640"></canvas>
 <canvas hidden id="renderer" width="960" height="640"></canvas>
 </body>
-<img hidden id='mapImg' src='resrc/collision-map.png' alt='img' onload="resrcLoaded()">
-<img hidden id='psprites' src='resrc/hector_greatlord_armads.png' alt='psprites' onload="resrcLoaded()">
+<!-- <img hidden id='cmapImg' src='resrc/collision-map.png' alt='img' onload="resrcLoaded()"> -->
+<img hidden id='psprites' src='resrc/hectorsheet.png' alt='psprites' onload="resrcLoaded()">
 <img hidden id='brickImg' src='resrc/Brick.png' alt='psprites' onload="resrcLoaded()">
 <img hidden id='grassImg' src='resrc/Grass.png' alt='psprites' onload="resrcLoaded()">
 <img hidden id='dirtImg' src='resrc/Dirt.png' alt='psprites' onload="resrcLoaded()">
@@ -43,25 +43,17 @@ var keys = {};
 var lastKeys = {};
 var camera = new Camera();
 var tileManager;
-var tileMap;
+var areaImg;
 
 var loadInterval = setInterval(attemptInit, 500);
 function attemptInit() {
     if (loadedResrcs == RESRCS_TO_LOAD) {
-        console.log("b")
         clearInterval(loadInterval)
-        ctx.drawImage(mapImg, 0, 0)
-        cMap = new CollisionMap(getCanvasImageData(ctx));
         player = new Player();
-        tileManager = new TileManager()
-        ctx.clearRect(0, 0, W, H);
-        ctx.drawImage(tileDictImg, 0, 0);
-        tileManager.registerTilesFromImg(getCanvasImageData(ctx, 0, 0, 2, 2), [grassImg, dirtImg, brickImg]);
-        ctx.clearRect(0, 0, W, H);
-        ctx.drawImage(tileMapImg, 0, 0);
-        tileMap = tileManager.createTileMap(getCanvasImageData(ctx, 0, 0, 30, 30))
-
-        console.log("a")
+        tileManager = new TileManager(tileDictImg, [brickImg, grassImg, dirtImg]);
+        areaImg = tileManager.createMap(tileMapImg);
+        cMap = new CollisionMap(img2AlphaMatrix(areaImg));
+        
         loadmsg.parentNode.removeChild(loadmsg);
         gameInt = setInterval(tick, 1);
         flushToCanvas()
@@ -73,13 +65,14 @@ function getCanvasImageData(ctx, x=0, y=0, w=W, h=H) {
 }
 
 function draw() {
+    ctx.clearRect(0, 0, W, H);
     ctx.save();
     camera.moveCtx(ctx);
-    ctx.drawImage(mapImg, 0, 0);
+    ctx.drawImage(areaImg, 0, 0);
     player.draw(ctx);
+    
     ctx.restore();
-
-    drawTileMap(ctx,tileMap);
+    // drawTileMap(ctx,tileMap);
     drawHUD()
 }
 
@@ -100,6 +93,7 @@ function tick() {
 
 
 function flushToCanvas() {
+    vis_ctx.clearRect(0, 0, W, H);
     vis_ctx.drawImage(renderer, 0, 0); //flush to canvas
     requestAnimationFrame(flushToCanvas);
 }

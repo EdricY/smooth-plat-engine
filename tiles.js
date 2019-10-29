@@ -1,11 +1,23 @@
 class TileManager {
     tileDict = {}; // color -> idx
     tileImgs = []; // idx  -> img
-    constructor(tileImgs, tw=32, th=32) {
+
+    /* tileDictImg - image of pixels corresponding to tileImgs or the dictionary itself
+     * tileImgs - list of drawable objects representing tiles or spritesheet
+     */
+    constructor(tileDictImg, tileImgs, tw=32, th=32) {
+        if (tileImgs instanceof Image) tileImgs = spriteSheetImg2ImgArray(tileImgs, tw, th);
+        this.tileImgs = tileImgs;
+        let idxarr = tileImgs.map((img, idx) => idx);
+        if (tileDictImg instanceof Image) tileDictImg = img2ColorDict(tileDictImg, idxarr);
+        this.tileDict = tileDictImg;
         this.tw = tw;
         this.th = th;
     }
 
+    /* Registers any additional tiles to a certain color. Should be mostly unused.
+     * Note that color might not perfectly match in some browsers.
+     */
     registerTile(color, tileImg) {
         let idx = this.tileImgs.length;
         this.tileImgs.push(tileImg);
@@ -22,43 +34,32 @@ class TileManager {
         return this.tileDict[color];
     }
 
-    registerTilesFromImg(imageData, tileImgs) {
-        let i = 0;
-        let data = imageData.data;
-        for (let row = 0; row < imageData.height; row++) {
-            for (let col = 0; col < imageData.width; col++) {
-                let pos = 4 * (col + row*imageData.width);
-                // let colorstr = imageData.slice(pos, pos+4).toString()
-                let r = data[pos];
-                let g = data[pos+1];
-                let b = data[pos+2];
-                let a = data[pos+3];
-                let colorstr = `${r},${g},${b},${a}`;
-                this.registerTile(colorstr, tileImgs[i++]);
-                if (i >= tileImgs.length) return;
-            }
-        }
-    }
 
-    createTileMap(imageData) {
-        let tileDataMatrix = [];
-        let data = imageData.data;
-        for (let row = 0; row < imageData.height; row++) {
-            tileDataMatrix.push([])
-            for (let col = 0; col < imageData.width; col++) {
-                let pos = 4 * (col + row*imageData.width);
-                // let colorstr = imageData.slice(pos, pos+4).toString()
-                let r = data[pos];
-                let g = data[pos+1];
-                let b = data[pos+2];
-                let a = data[pos+3];
-                let colorstr = `${r},${g},${b},${a}`;
-                let tidx = this.getTileIdx(colorstr);
-                if (tidx == undefined) tidx = null;
-                tileDataMatrix[row].push(tidx);
+    /* Creats a large image of a tile map given a small image of pixels. 
+     * pixelImg - the image or ImageData with pixels corresponding to one tile each.
+     * tileCallback : function(tileIdx, x, y) - called on each tile--useful for adding objects
+     */
+    createMap(pixelImg, tileCallback) {
+        let matrix;
+        if (pixelImg instanceof Image) matrix = img2Matrix(pixelImg, this.tileDict);
+        else matrix = imageData2Matrix(pixelImg, this.tileDict);
+        let canvas = document.createElement("canvas");
+        let ctx = canvas.getContext("2d");
+        canvas.width = matrix[0].length * this.tw;
+        canvas.height = matrix.length * this.th;
+        for (let r = 0; r < matrix.length; r++) {
+            for (let c = 0; c < matrix[r].length; c++) {
+                let tileIdx = matrix[r][c];
+                let tileImg = this.tileImgs[tileIdx];
+                if (tileImg === undefined) tileImg = null;
+                let x = this.tw * c; 
+                let y = this.th * r;
+                if (tileImg != null) ctx.drawImage(tileImg, x, y);
+                if (tileCallback != null) tileCallback(tileIdx, x, y); 
             }
         }
-        return tileDataMatrix;
+
+        return canvas2Img(canvas);
     }
 }
 

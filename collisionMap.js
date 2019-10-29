@@ -5,25 +5,8 @@ const PIXELDICT = {
 }
 
 class CollisionMap {
-    constructor(imageData) {
-        this.collMatrix = [];
-        for (let row = 0; row < imageData.height; row++) {
-            this.collMatrix.push([])
-            for (let col = 0; col < imageData.width; col++) {
-                let pos = 4 * (col + row*W);
-                // let colorstr = imageData.slice(pos, pos+4).toString()
-                let r = imageData.data[pos];
-                let g = imageData.data[pos+1];
-                let b = imageData.data[pos+2];
-                let a = imageData.data[pos+3];
-                let colorstr = `${r},${g},${b},${a}`;
-                let pxid = PIXELDICT[colorstr]
-                if (pxid === undefined) {
-                    pxid = a == 0 ? null : 1;
-                }
-                this.collMatrix[row].push(pxid);
-            }
-        }
+    constructor(collMatrix) {
+        this.collMatrix = collMatrix;
     }
 
     getPixel(x, y) {
@@ -36,7 +19,8 @@ class CollisionMap {
         if (r >= H) return x;           //screen bottom
         x = Math.round(x) - halfwidth;  //left
         for (let c = x; c < x + halfwidth*2; c++) {
-            if (this.collMatrix[r][c] !== null) {
+            // if (this.collMatrix[r][c] !== null) {
+            if (this.collMatrix[r][c] == 1) {
                 return c;
             }
         }

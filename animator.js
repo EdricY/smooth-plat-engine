@@ -42,8 +42,8 @@ class Animator {
     }
 
     /*
-     * newState - string (or int/enumvalue) - the state to switch to
-     * onupdate - function(t) - function to call on update
+     * newState - dictionary key of the state to switch to
+     * onupdate : function(t) - function to call on update
      */
     switchState(newState, onupdate) {
         this.state = this.stateDict[newState];

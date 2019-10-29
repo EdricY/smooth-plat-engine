@@ -1,5 +1,6 @@
 
 //TODO: remove usage of ImageData from everywhere but this file.
+//TODO: put these functions into a static class (similar to Math)
 
 /* Creates a dictionary that maps colorstr to value
  * imageData - imageData with pixels of colors to map onto values
@@ -49,7 +50,7 @@ function imageData2Matrix(imageData, pixelDict) {
             let colorstr = `${r},${g},${b},${a}`;
             let val = pixelDict[colorstr];
             if (val == undefined) val = null;
-            matrix.push(val);
+            matrix[row].push(val);
         }
     }
     return matrix;
@@ -58,6 +59,34 @@ function imageData2Matrix(imageData, pixelDict) {
 function img2Matrix(img, pixelDict) {
     return imageData2Matrix(img2ImageData(img), pixelDict);
 }
+
+/* Creates a matrix of values corresponding to alpha values in imageData
+ * imageData - imageData with pixels that have alpha values of interest
+ * binary - set to true populate matrix with booleans
+ *          set to false to get actual alpha values (0-255)
+ */
+function imageData2AlphaMatrix(imageData, binary=true) {
+    let matrix = [];
+    let data = imageData.data;
+    for (let row = 0; row < imageData.height; row++) {
+        matrix.push([]);
+        for (let col = 0; col < imageData.width; col++) {
+            let pos = 4 * (col + row*imageData.width);
+            let a = data[pos+3];
+            if (binary) {
+                if (a > 0) a = true;
+                else a = false;
+            }
+            matrix[row].push(a);
+        }
+    }
+    return matrix;
+}
+
+function img2AlphaMatrix(img, binary=true) {
+    return imageData2AlphaMatrix(img2ImageData(img), binary);
+}
+
 
 function spriteSheetImg2ImgArray(img, spw=32, sph=32) {
     let canvas = document.createElement("canvas");
