@@ -3,25 +3,27 @@
 <head>
 <script>
 var loadedResrcs = 0;
-const RESRCS_TO_LOAD = 6;
-function resrcLoaded() { loadedResrcs++; }
+const RESRCS_TO_LOAD = 7;
+function resrcLoaded() { loadedResrcs++; loadmsg.innerHTML+=".";}
 </script>
 </head>
-<body>
-<div id="loadmsg">Loading...</div>
+<body id="body">
+<div id="loadmsg">Loading</div>
 <canvas id="canvas" width="960" height="640"></canvas>
 <canvas hidden id="renderer" width="960" height="640"></canvas>
+<canvas hidden id="tempCanvas" width="960" height="640"></canvas>
 </body>
 <!-- <img hidden id='cmapImg' src='resrc/collision-map.png' alt='img' onload="resrcLoaded()"> -->
-<img hidden id='psprites' src='resrc/hectorsheet.png' alt='psprites' onload="resrcLoaded()">
-<img hidden id='brickImg' src='resrc/Brick.png' alt='psprites' onload="resrcLoaded()">
-<img hidden id='grassImg' src='resrc/Grass.png' alt='psprites' onload="resrcLoaded()">
-<img hidden id='dirtImg' src='resrc/Dirt.png' alt='psprites' onload="resrcLoaded()">
-<img hidden id='tileDictImg' src='resrc/TileDictionary.png' alt='tdict' onload="resrcLoaded()">
-<img hidden id='tileMapImg' src='resrc/TileMap.png' alt='psprites' onload="resrcLoaded()">
+<img hidden id='psprites' alt='psprites' onload="resrcLoaded()" src='resrc/hectorsheet.png'>
+<img hidden id='brickImg' alt='brick' onload="resrcLoaded()" src='resrc/Brick.png'>
+<img hidden id='grassImg' alt='grass' onload="resrcLoaded()" src='resrc/Grass.png'>
+<img hidden id='dirtImg' alt='dirt' onload="resrcLoaded()" src='resrc/Dirt.png'>
+<img hidden id='tileDictImg' alt='tdict' onload="resrcLoaded()" src='resrc/TileDictionary.png'>
+<img hidden id='tileMapImg' alt='psprites' onload="resrcLoaded()" src='resrc/TileMap.png'>
+<img hidden id='tileSheetImg' alt='psprites' onload="resrcLoaded()" src='resrc/TileSheet.png'>
 
-<script src="imgutil.js"></script>
 <script src="constants.js"></script>
+<script src="imgutil.js"></script>
 <script src="collisionMap.js"></script>
 <script src="camera.js"></script>
 <script src="animator.js"></script>
@@ -29,7 +31,7 @@ function resrcLoaded() { loadedResrcs++; }
 <script src="tiles.js"></script>
 <script>
 // declarations
- 
+
 var vis_ctx = canvas.getContext('2d')
 var ctx = renderer.getContext('2d')
 
@@ -43,17 +45,18 @@ var keys = {};
 var lastKeys = {};
 var camera = new Camera();
 var tileManager;
-var areaImg;
+var areaCanvas;
 
-var loadInterval = setInterval(attemptInit, 500);
+var loadInterval = setInterval(attemptInit, 1000);
 function attemptInit() {
     if (loadedResrcs == RESRCS_TO_LOAD) {
         clearInterval(loadInterval)
         player = new Player();
-        tileManager = new TileManager(tileDictImg, [brickImg, grassImg, dirtImg]);
-        areaImg = tileManager.createMap(tileMapImg);
-        cMap = new CollisionMap(img2AlphaMatrix(areaImg));
-        
+        tileManager = new TileManager(tileDictImg, [brickImg, grassImg, dirtImg]);//tileSheetImg)
+        areaCanvas = tileManager.createMap(tileMapImg, ()=>{});
+
+        cMap = new CollisionMap(img2AlphaMatrix(areaCanvas));
+
         loadmsg.parentNode.removeChild(loadmsg);
         gameInt = setInterval(tick, 1);
         flushToCanvas()
@@ -68,7 +71,7 @@ function draw() {
     ctx.clearRect(0, 0, W, H);
     ctx.save();
     camera.moveCtx(ctx);
-    ctx.drawImage(areaImg, 0, 0);
+    ctx.drawImage(areaCanvas, 0, 0);
     player.draw(ctx);
     
     ctx.restore();

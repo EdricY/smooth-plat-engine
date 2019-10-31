@@ -55,11 +55,10 @@ class TileManager {
                 let x = this.tw * c; 
                 let y = this.th * r;
                 if (tileImg != null) ctx.drawImage(tileImg, x, y);
-                if (tileCallback != null) tileCallback(tileIdx, x, y); 
+                if (tileCallback != null) tileCallback(tileIdx, x, y);
             }
         }
-
-        return canvas2Img(canvas);
+        return canvas;
     }
 }
 

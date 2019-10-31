@@ -60,9 +60,9 @@ class Player {
                 // if (this.vx > this.mvx) this.vx = this.mvx;
                 if (this.vx > 0) this.facingRight = true;
             }
-            if (this.jumps && (keys[38] || keys[87]) && (!lastKeys[38] && !lastKeys[87]) && !this.animCheck("jumpcrouch")) { //up
+            if (this.jumps && (keys[38] || keys[87]) && (!lastKeys[38] && !lastKeys[87])) { //up
                 this.jv = -18;
-                this.animator.switchState("jumpcrouch", t => {
+                this.animator.play("jumpcrouch", t => {
                     if (t > P_CROUCH_DUR) {
                         this.animator.switchState("midair");
                         this.vy = this.jv;
@@ -89,6 +89,7 @@ class Player {
                         camera.shake(8);
                         this.animator.switchState("land", t => {
                             if (t >= P_LAND_DUR) {
+                                // might be bad practice... maybe setup timers on the player instead
                                 this.animator.switchState("stand");
                             }
                         });
@@ -125,7 +126,7 @@ class Player {
             }
         }
 
-        this.vx *= FRICTION; //maybe only when on ground?
+        this.vx *= FRICTION; //maybe different value when midair?
         if (Math.abs(this.vx) - .01 < 0) {
             this.vx = 0;
         }

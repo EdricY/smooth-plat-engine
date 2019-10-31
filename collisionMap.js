@@ -20,7 +20,8 @@ class CollisionMap {
         x = Math.round(x) - halfwidth;  //left
         for (let c = x; c < x + halfwidth*2; c++) {
             // if (this.collMatrix[r][c] !== null) {
-            if (this.collMatrix[r][c] == 1) {
+            let val = this.collMatrix[r][c];
+            if (val == 1 || val === 0) {
                 return c;
             }
         }

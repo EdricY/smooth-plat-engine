@@ -26,6 +26,8 @@ function imageData2ColorDict(imageData, values) {
     return dict;
 }
 
+/* img - img or canvas to convert to ColorDict
+ */
 function img2ColorDict(img, values) {
     return imageData2ColorDict(img2ImageData(img), values);
 }
@@ -56,6 +58,8 @@ function imageData2Matrix(imageData, pixelDict) {
     return matrix;
 }
 
+/* img - img or canvas to convert to matrix
+ */
 function img2Matrix(img, pixelDict) {
     return imageData2Matrix(img2ImageData(img), pixelDict);
 }
@@ -94,8 +98,8 @@ function spriteSheetImg2ImgArray(img, spw=32, sph=32) {
     canvas.width = spw;
     canvas.height = sph;
     let imgs = [];
-    for (let y=0; y < img.height; y+=sph) {
-        for (let x=0; x < img.width; x+=spw) {
+    for (let y=0; y+sph <= img.height; y+=sph) {
+        for (let x=0; x+spw <= img.width; x+=spw) {
             ctx.drawImage(img, x, y, spw, sph, 0, 0, spw, sph);
             imgs.push(canvas2Img(canvas));
         }
@@ -103,6 +107,8 @@ function spriteSheetImg2ImgArray(img, spw=32, sph=32) {
     return imgs;
 }
 
+/* img - img or canvas to convert to ImageData
+ */
 function img2ImageData(img) {
     let canvas = document.createElement("canvas");
     let ctx = canvas.getContext("2d");
@@ -112,14 +118,36 @@ function img2ImageData(img) {
     return ctx.getImageData(0, 0, canvas.width, canvas.height);
 }
 
-function ctx2Img(ctx) {
-    let img = document.createElement("img"); // new Image()
-    img.src = ctx.canvas.toDataURL();
+async function canvas2Img(canvas) {
+    let img = document.createElement("img");
+    img.src = canvas.toDataURL();
+    if (img.width > 0) return img;
+    // fixes: Uncaught DOMException: Failed to execute 'getImageData' on 'CanvasRenderingContext2D': The source width is 0.
+    // requires await... avoid using this function by passing canvas instead of img.
+    while (img.width <= 0) {
+        console.log("try again")
+        img = await canvas2ImgPromise(canvas, 0);
+    }
     return img;
 }
 
-function canvas2Img(canvas) {
-    let img = document.createElement("img"); // new Image()
-    img.src = canvas.toDataURL();
+function canvas2ImgPromise(canvas, timeout) {
+    let img = document.createElement("img");
+    return new Promise(resolve => {
+        setTimeout(() => {
+            img.src = canvas.toDataURL();
+            img.onload = () => { 
+                resolve(img);
+            }
+            img.onerror = () => { console.log ('something wrong')}
+        }, timeout);
+    });
+}
+
+
+//hopefully you don't need to use this...
+function ctx2Img(ctx) {
+    let img = document.createElement("img");
+    img.src = ctx.canvas.toDataURL();
     return img;
 }

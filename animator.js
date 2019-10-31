@@ -51,6 +51,15 @@ class Animator {
         this.onupdate = onupdate;
         this.t = 0;
     }
+    
+    /* Starts playing or continues to play given animation
+     * stateName - dictionary key of the state to switch to
+     * onupdate : function(t) - function to call on update
+     */
+    play(stateName, onupdate) {
+        if (this.inState(stateName)) return;
+        this.switchState(stateName, onupdate);
+    }
 }
 
 function getTimeBasedFrameSelector(duration, numFrames) {
@@ -65,5 +74,16 @@ function getLoopingFrameSelector(duration, numFrames) {
     let perFrame = duration / numFrames;
     return (t => {
         return Math.floor(t/perFrame) % numFrames;
+    });
+}
+
+function getReversingFrameSelector(duration, numFrames) {
+    if (numFrames < 2) throw RangeError("numFrames should be greater than 2.")
+    let b = numFrames - 1;
+    numFrames = (numFrames * 2) - 2;
+    let perFrame = duration / numFrames;
+    return (t => {
+        let x = Math.floor(t/perFrame) % numFrames;
+        return b - Math.abs(b - x);
     });
 }
