@@ -12,7 +12,6 @@ class Player {
     // mvx = 20;
     mvy = 22;
     jumps = 1;
-    step_h = 16;
     midair = true;
     animator = new Animator();
     facingRight = false;
@@ -69,67 +68,75 @@ class Player {
                     }
                 });
             }
-            if ((!keys[38] && !keys[87]) && (lastKeys[38] || lastKeys[87]) && this.animCheck("jumpcrouch")) { //short hop
+            if ((!keys[38] && !keys[87]) && (lastKeys[38] || lastKeys[87]) && this.animCheck("jumpcrouch")) {
+                //short hop
                 this.jv = -13;
             }
         }
         let omidair = this.midair;
         let ovy = this.vy;
+        let ovx = this.vx;
         this.vy += GRAVITY;
         if (this.vy > this.mvy) this.vy = this.mvy;
-        let vy = Math.round(this.vy);
+        
+        //movement
+        let vy = Math.round(this.vy); //maaaybe don't do this...
+        let vx = Math.round(this.vx); //some precision of x and y pos (but not vel) is lost
+                                      //could store values past decimal pt in another variable
+        vy = Math.abs(vy);
+        vx = Math.abs(vx);
+        let ystride = vy / vx;
+        let xtravesed = 0, ytravesed = 0, steppedUp = 0;
+        this.xScoot = this.vx > 0 ? this.scootRight : this.scootLeft; //store on "this." to avoid using call()
+        this.yScoot = this.vy > 0 ? this.scootDown : this.scootUp;
+        let xCls, yCls;
+        while (xtravesed < vx) {
+            xCls = this.xScoot(cMap);
+            if (xCls != null) {
+                if (steppedUp < STEP_UP_GRACE) {
+                    let stepHeight = this.y - xCls + 1;
+                    steppedUp += stepHeight;
+                    if (steppedUp > STEP_UP_GRACE) break;
+                    this.y = xCls-1;
+                    ytravesed += stepHeight;
+                    this.vx = ovx;
+                } else break;
+            }
+            xtravesed++;
+            let yCount = 0;
+            while (yCount < ystride && ytravesed < vy) {
+                yCls = this.yScoot(cMap);
+                if (yCls != null) {
+                    ytravesed = vy;
+                    break;
+                }
+                yCount++;
+                ytravesed++;
+            }
+        }
+        //finish out any leftover y movement
+        while (ytravesed < vy && yCls == null) {
+            yCls = this.yScoot(cMap);
+            ytravesed++;
+        }
 
-        //TODO: x-to-y ratio-driven slanted movement instead of L-shaped movement
-        if (vy > 0) { //moving down
-            for (let i = 0; i < vy; i++) {
-                let x_cls = this.scootDown(cMap);
-                if (x_cls != null) {
-                    this.midair = false;
-                    if (ovy > 8) { //hard landing
-                        camera.shake(8);
-                        this.animator.switchState("land", t => {
-                            if (t >= P_LAND_DUR) {
-                                // might be bad practice... maybe setup timers on the player instead
-                                this.animator.switchState("stand");
-                            }
-                        });
-                    } else if (this.animCheck("midair")) {
+        if (yCls != null && ovy > 0) { //landing
+            if (ovy > 8) { // hard landing
+                camera.shake(8);
+                this.animator.play("land", t => {
+                    if (t >= P_LAND_DUR) {
+                        // might be bad practice... maybe setup timers on the player instead
                         this.animator.switchState("stand");
                     }
-                }
-            }
-        } else if (vy < 0) { //moving up
-            this.midair = true;
-            for (let i = 0; i > vy; i--) {
-                this.scootUp(cMap);
-            }
-        }
-        
-        let vx = Math.round(this.vx);
-        if (vx > 0) { //moving right
-            for (let i = 0; i < vx; i++) {
-                let y_cls = this.scootRight(cMap);
-                let step_h = this.y-y_cls;
-                if (step_h < this.step_h) {
-                    this.y = y_cls-1;
-                    this.x++;
-                }
-            }
-        } else if (vx < 0) { //moving left
-            for (let i = 0; i > vx; i--) {
-                let y_cls = this.scootLeft(cMap);
-                let step_h = this.y-y_cls;
-                if (step_h < this.step_h) {
-                    this.y = y_cls-1;
-                    this.x--;
-                }
+                });
+            } else {
+                this.animator.play("stand");
             }
         }
 
-        this.vx *= FRICTION; //maybe different value when midair?
-        if (Math.abs(this.vx) - .01 < 0) {
-            this.vx = 0;
-        }
+        this.vx *= FRICTION; //maybe different value when midair? switch to lerp?
+        if (Math.abs(this.vx) - .01 < 0) this.vx = 0;
+        
             
         if (this.midair && this.animCheck("stand"))
         {
@@ -148,11 +155,12 @@ class Player {
             this.midair = true;
         } else { //landed on something
             this.vy = 0;
+            this.midair = false;
         }
         return x_cls;
     }
 
-    /* move up 1 pixel or collide
+    /* move up 1 pixel or collide and 0 out this.vy
      * returns x-collision or null
      */
     scootUp(cMap) { 
@@ -166,7 +174,7 @@ class Player {
         return x_cls;
     }
 
-    /* move right 1 pixel or collide
+    /* move right 1 pixel or collide and 0 out this.vx
      * returns y-collision or null
      */
     scootRight(cMap) {
@@ -180,7 +188,7 @@ class Player {
         return y_cls;
     }
 
-    /* move left 1 pixel or collide
+    /* move left 1 pixel or collide and 0 out this.vx
      * returns y-collision or null
      */
     scootLeft(cMap) {

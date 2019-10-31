@@ -1,5 +1,4 @@
 
-//TODO: remove usage of ImageData from everywhere but this file.
 //TODO: put these functions into a static class (similar to Math)
 
 /* Creates a dictionary that maps colorstr to value
@@ -118,17 +117,25 @@ function img2ImageData(img) {
     return ctx.getImageData(0, 0, canvas.width, canvas.height);
 }
 
-async function canvas2Img(canvas) {
+function canvas2Img(canvas) {
     let img = document.createElement("img");
     img.src = canvas.toDataURL();
     if (img.width > 0) return img;
-    // fixes: Uncaught DOMException: Failed to execute 'getImageData' on 'CanvasRenderingContext2D': The source width is 0.
+    console.log('cloning and returning canvas')
+    let canvas2 = document.createElement("canvas");
+    canvas2.width = canvas.width;
+    canvas2.height = canvas.height;
+    canvas2.getContext("2d").drawImage(canvas, 0, 0);
+    return canvas2;
+
+    // fixes: Uncaught DOMException: 
+    // Failed to execute 'getImageData' on 'CanvasRenderingContext2D': The source width is 0.
     // requires await... avoid using this function by passing canvas instead of img.
-    while (img.width <= 0) {
-        console.log("try again")
-        img = await canvas2ImgPromise(canvas, 0);
-    }
-    return img;
+    // while (img.width <= 0) {
+    //     console.log("try again")
+    //     img = await canvas2ImgPromise(canvas, 0);
+    // }
+    // return img;
 }
 
 function canvas2ImgPromise(canvas, timeout) {

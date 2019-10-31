@@ -10,6 +10,8 @@ const FRICTION = .90; //unsure exactly why, but...
 const W = renderer.width
 const H = renderer.height
 
+const STEP_UP_GRACE = 16;
+
 const P_CROUCH_DUR = 6;
 const P_LAND_DUR = 14;
 
