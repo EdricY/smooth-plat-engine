@@ -97,6 +97,7 @@ class Player {
                     let stepHeight = this.y - xCls + 1;
                     steppedUp += stepHeight;
                     if (steppedUp > STEP_UP_GRACE) break;
+                    //TODO: bugfix - can step into collision/offscreen areas
                     this.y = xCls-1;
                     ytravesed += stepHeight;
                     this.vx = ovx;
