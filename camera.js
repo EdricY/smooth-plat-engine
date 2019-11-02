@@ -33,6 +33,7 @@ class Camera {
     }
 
     moveCtx(ctx) {
+        // TODO: this is backwards
         if (this.xShakeFactor > 0) ctx.translate(this.x, this.y);
         else ctx.translate(this.xAnchor, this.yAnchor);
     }
